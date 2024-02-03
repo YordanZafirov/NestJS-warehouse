@@ -10,6 +10,7 @@ import { APP_GUARD } from '@nestjs/core';
 import { AuthGuard } from 'src/guards/auth.guard';
 import { RolesGuard } from 'src/guards/roles.guard';
 import { ConfigModule } from '@nestjs/config';
+import { jwtConstants } from './jwtConstrain';
 
 @Module({
   imports: [
@@ -18,8 +19,8 @@ import { ConfigModule } from '@nestjs/config';
     forwardRef(() => UserModule),
     JwtModule.register({
       global: true,
-      secret: process.env.JWT_SECRET || 'secret',
-      signOptions: { expiresIn: '1d' },
+      secret: jwtConstants.secret,
+      signOptions: { expiresIn: '6h' },
     }),
   ],
   providers: [

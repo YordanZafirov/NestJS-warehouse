@@ -12,13 +12,11 @@ import { OrderService } from './order.service';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { UpdateOrderDto } from './dto/update-order.dto';
 import { Roles } from 'src/decorators/roles.decorator';
-import { OrderDetailsService } from 'src/order-details/order-details.service';
 
 @Controller('order')
 export class OrderController {
   constructor(
     private readonly orderService: OrderService,
-    private readonly orderDetailService: OrderDetailsService,
   ) {}
 
   @Roles('OPERATOR')

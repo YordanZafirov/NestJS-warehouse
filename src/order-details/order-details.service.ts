@@ -7,7 +7,7 @@ import { CreateOrderDetailDto } from './dto/create-order-detail.dto';
 import { UpdateOrderDetailDto } from './dto/update-order-detail.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { OrderDetail } from './entities/order-detail.entity';
-import { Repository} from 'typeorm';
+import { Repository } from 'typeorm';
 import { Order } from 'src/order/entities/order.entity';
 import { Product } from 'src/product/entities/product.entity';
 import { Warehouse } from 'src/warehouse/entities/warehouse.entity';
@@ -17,47 +17,14 @@ export class OrderDetailsService {
   constructor(
     @InjectRepository(OrderDetail)
     private readonly orderDetailRepository: Repository<OrderDetail>,
+    @InjectRepository(Product)
+    private readonly productRepository: Repository<Product>,
   ) {}
 
-  async create(orderDetailDto: CreateOrderDetailDto): Promise<OrderDetail> {
-    try {
-      const { orderId, productId, quantity, unitPrice } = orderDetailDto;
-
-      if(!productId){
-        throw new BadRequestException('Product id is required');
-      } else if(!quantity){
-        throw new BadRequestException('Quantity is required');
-      } else if(!unitPrice){
-        throw new BadRequestException('Unit price is required');
-      }
-
-      if (quantity <= 0) {
-        throw new BadRequestException('Quantity must be greater than 0');
-      } else if(quantity !== Number(quantity)){
-        throw new BadRequestException('Quantity must be a number');
-      } else if(unitPrice !== Number(unitPrice)){
-        throw new BadRequestException('Unit price must be a number');
-      } else if(unitPrice <= 0){
-        throw new BadRequestException('Unit price must be greater than 0');
-      }
-
-      const orderDetail = this.orderDetailRepository.create({
-        orderId: { id: orderId },
-        productId: { id: productId },
-        quantity,
-        unitPrice,
-      });
-
-      return await this.orderDetailRepository.save(orderDetail);
-    } catch (error) {
-      throw new BadRequestException(
-        error.message || 'Failed to save order detail',
-      );
-    }
-  }
-
   async findAll(): Promise<OrderDetail[]> {
-    return await this.orderDetailRepository.find();
+    return await this.orderDetailRepository.find({
+      relations: ['productId', 'orderId'],
+    });
   }
 
   async findOne(id: string): Promise<OrderDetail> {
@@ -72,6 +39,56 @@ export class OrderDetailsService {
     } catch (error) {
       throw new NotFoundException(
         error.message || 'Failed to find order detail',
+      );
+    }
+  }
+
+  async create(orderDetailDto: CreateOrderDetailDto): Promise<OrderDetail> {
+    try {
+      const { orderId, productId, quantity, unitPrice } = orderDetailDto;
+
+      if (!productId) {
+        throw new BadRequestException('Product id is required');
+      } else if (!quantity) {
+        throw new BadRequestException('Quantity is required');
+      } else if (!unitPrice) {
+        throw new BadRequestException('Unit price is required');
+      }
+
+      if (
+        quantity <= 0 ||
+        isNaN(quantity) ||
+        unitPrice <= 0 ||
+        isNaN(unitPrice)
+      ) {
+        throw new BadRequestException('Invalid quantity or unit price');
+      }
+
+      if (quantity <= 0) {
+        throw new BadRequestException('Quantity must be greater than 0');
+      } else if (quantity !== Number(quantity)) {
+        throw new BadRequestException('Quantity must be a number');
+      } else if (unitPrice !== Number(unitPrice)) {
+        throw new BadRequestException('Unit price must be a number');
+      } else if (unitPrice <= 0) {
+        throw new BadRequestException('Unit price must be greater than 0');
+      }
+
+      const product = await this.productRepository.findOne({
+        where: { id: productId },
+      });
+
+      const orderDetail = this.orderDetailRepository.create({
+        orderId: { id: orderId },
+        productId: product,
+        quantity,
+        unitPrice,
+      });
+
+      return await this.orderDetailRepository.save(orderDetail);
+    } catch (error) {
+      throw new BadRequestException(
+        error.message || 'Failed to save order detail',
       );
     }
   }

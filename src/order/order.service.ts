@@ -19,46 +19,6 @@ import { OrderDetail } from 'src/order-details/entities/order-detail.entity';
 import { InvoiceService } from 'src/invoice/invoice.service';
 import { Client } from 'src/client/entities/client.entity';
 
-const transferFunctionality = async (
-  createOrderDto: CreateOrderDto,
-  warehouseService: WarehouseService,
-  warehouse: Warehouse,
-): Promise<Warehouse | undefined> => {
-  let outgoingWarehouse: Warehouse | undefined;
-
-  if (createOrderDto.type === 'transfer') {
-    if (!createOrderDto.outgoingWarehouse) {
-      throw new BadRequestException(
-        'Outgoing warehouse is required for transfer orders',
-      );
-    }
-
-    outgoingWarehouse = await warehouseService.findOne(
-      createOrderDto.outgoingWarehouse,
-    );
-
-    if (!outgoingWarehouse || outgoingWarehouse.deletedAt) {
-      throw new BadRequestException(
-        'Outgoing warehouse not found or deleted for transfer',
-      );
-    }
-
-    if (warehouse.id === outgoingWarehouse.id) {
-      throw new BadRequestException(
-        'Warehouse and Outgoing Warehouse cannot be the same for transfer orders',
-      );
-    }
-
-    if (warehouse.type !== outgoingWarehouse.type) {
-      throw new BadRequestException(
-        'Warehouse and Outgoing Warehouse must have the same type for transfer orders',
-      );
-    }
-  }
-
-  return outgoingWarehouse;
-};
-
 @Injectable()
 export class OrderService {
   constructor(
@@ -73,6 +33,28 @@ export class OrderService {
     private readonly productService: ProductService,
     private readonly invoiceService: InvoiceService,
   ) {}
+
+  async findAll() {
+    const orders = await this.orderRepository.find({ loadRelationIds: true });
+    return orders;
+  }
+
+  async findOne(id: string, options?: { relations?: string[] }) {
+    try {
+      const order = await this.orderRepository.findOne({
+        where: { id },
+        relations: options?.relations || [],
+      });
+
+      if (!order) {
+        throw new NotFoundException('Order not found');
+      }
+
+      return order;
+    } catch (error) {
+      throw new NotFoundException(error.message || 'Failed to save order');
+    }
+  }
 
   async create(createOrderDto: CreateOrderDto) {
     try {
@@ -91,32 +73,14 @@ export class OrderService {
           );
         }
       } else {
-        outgoingWarehouse = await transferFunctionality(
+        outgoingWarehouse = await this.transferFunctionality(
           createOrderDto,
           this.warehouseService,
           warehouse,
         );
       }
 
-      // Check if the products exist and are not deleted
-      for (const orderDetail of createOrderDto.product) {
-        const product = await this.productService.findOne(
-          orderDetail.productId,
-        );
-        if (!product || product.deletedAt) {
-          throw new NotFoundException('Product not found');
-        }
-
-        if (createOrderDto.type === 'delivery') {
-          if (warehouse.type !== product.type) {
-            throw new BadRequestException(
-              'Product type must match warehouse type for delivery',
-            );
-          }
-        }
-      }
-
-      if (!client || !warehouse || client.deletedAt || warehouse.deletedAt) {
+      if (!client || !warehouse) {
         throw new NotFoundException('Client or Warehouse not found');
       }
 
@@ -131,12 +95,24 @@ export class OrderService {
       // Create corresponding OrderDetails
       const orderDetails = [];
       for (const orderDetail of createOrderDto.product) {
+        const product = await this.productService.findOne(
+          orderDetail.productId,
+        );
+
+        if (createOrderDto.type === 'delivery') {
+          if (warehouse.type !== product.type) {
+            throw new BadRequestException(
+              'Product type must match warehouse type for delivery',
+            );
+          }
+        }
         const detail = await this.orderDetailsService.create({
           orderId: order.id,
           productId: orderDetail.productId,
           quantity: orderDetail.quantity,
           unitPrice: orderDetail.unitPrice,
         });
+
         orderDetails.push(detail);
       }
 
@@ -152,7 +128,7 @@ export class OrderService {
 
       return { id, clientId, warehouseId, orderDetails };
     } catch (error) {
-      if(error instanceof BadRequestException) {
+      if (error instanceof BadRequestException) {
         throw new BadRequestException(error.message);
       } else {
         throw new NotFoundException(error.message || 'Failed to save order');
@@ -160,33 +136,11 @@ export class OrderService {
     }
   }
 
-  async findAll() {
-    const orders = await this.orderRepository.find({ loadRelationIds: true });
-    return orders;
-  }
-
-  async findOne(id: string) {
-    try {
-      const order = await this.orderRepository.findOne({
-        where: { id },
-        relations: ['clientId', 'warehouseId'],
-      });
-
-      if (!order || order.deletedAt) {
-        throw new NotFoundException('Order not found');
-      }
-
-      return order;
-    } catch (error) {
-      throw new NotFoundException(error.message || 'Failed to save order');
-    }
-  }
-
   async update(orderId: string, updateOrderDto: UpdateOrderDto) {
     try {
-      const order = await this.orderRepository.findOneBy({ id: orderId });
+      const order = await this.findOne(orderId);
 
-      if (!order || order.deletedAt) {
+      if (!order) {
         throw new NotFoundException('Order not found');
       }
 
@@ -195,7 +149,7 @@ export class OrderService {
         const client = await this.clientService.findOne(
           updateOrderDto.clientId,
         );
-        if (!client || client.deletedAt) {
+        if (!client) {
           throw new NotFoundException('Client not found');
         }
         order.clientId = client;
@@ -215,18 +169,13 @@ export class OrderService {
         const outgoingWarehouse = await this.warehouseService.findOne(
           updateOrderDto.outgoingWarehouse,
         );
-        if (!outgoingWarehouse || outgoingWarehouse.deletedAt) {
+        if (!outgoingWarehouse) {
           throw new NotFoundException('Outgoing Warehouse not found');
         }
         order.outgoingWarehouseId = outgoingWarehouse;
       }
 
-      if (updateOrderDto.type) {
-        order.type = updateOrderDto.type;
-      }
-
       // Save the updated order
-      // изпрати му id-то на orderDetails, a не на order
       const updatedOrder = await this.orderRepository.save(order);
       const orderDetails = [];
       for (const orderDetail of updateOrderDto.product) {
@@ -245,10 +194,7 @@ export class OrderService {
 
   async remove(id: string) {
     try {
-      const order = await this.orderRepository.findOne({
-        where: { id },
-        relations: ['orderDetails'],
-      });
+      const order = await this.findOne(id, { relations: ['orderDetails'] });
 
       if (!order) {
         throw new NotFoundException('Order not found');
@@ -271,10 +217,7 @@ export class OrderService {
 
   async softDelete(id: string) {
     try {
-      const order = await this.orderRepository.findOne({
-        where: { id },
-        relations: ['orderDetails'],
-      });
+      const order = await this.findOne(id, { relations: ['orderDetails'] });
 
       if (!order || order.deletedAt) {
         throw new NotFoundException('Order not found or already deleted');
@@ -309,4 +252,44 @@ export class OrderService {
 
     return query;
   }
+
+  private transferFunctionality = async (
+    createOrderDto: CreateOrderDto,
+    warehouseService: WarehouseService,
+    warehouse: Warehouse,
+  ): Promise<Warehouse | undefined> => {
+    let outgoingWarehouse: Warehouse | undefined;
+
+    if (createOrderDto.type === 'transfer') {
+      if (!createOrderDto.outgoingWarehouse) {
+        throw new BadRequestException(
+          'Outgoing warehouse is required for transfer orders',
+        );
+      }
+
+      outgoingWarehouse = await warehouseService.findOne(
+        createOrderDto.outgoingWarehouse,
+      );
+
+      if (!outgoingWarehouse || outgoingWarehouse.deletedAt) {
+        throw new BadRequestException(
+          'Outgoing warehouse not found or deleted for transfer',
+        );
+      }
+
+      if (warehouse.id === outgoingWarehouse.id) {
+        throw new BadRequestException(
+          'Warehouse and Outgoing Warehouse cannot be the same for transfer orders',
+        );
+      }
+
+      if (warehouse.type !== outgoingWarehouse.type) {
+        throw new BadRequestException(
+          'Warehouse and Outgoing Warehouse must have the same type for transfer orders',
+        );
+      }
+    }
+
+    return outgoingWarehouse;
+  };
 }

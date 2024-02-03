@@ -2,55 +2,19 @@ import { BadRequestException, Injectable } from '@nestjs/common';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { InjectRepository } from '@nestjs/typeorm';
-import { ItemType, Product, UnitType } from './entities/product.entity';
+import { ProductType, Product, UnitType } from './entities/product.entity';
 import { Repository } from 'typeorm';
-
-const allowedTypeToUnitType = {
-  [ItemType.solid]: [UnitType.KILOGRAM],
-  [ItemType.liquid]: [UnitType.LITER],
-};
-
-const checkCreateProductDto = (dto: CreateProductDto | UpdateProductDto) => {
-  if (!Object.values(ItemType).includes(dto.type)) {
-    throw new BadRequestException('Invalid item type');
-  }
-
-  if (!Object.values(UnitType).includes(dto.unitType)) {
-    throw new BadRequestException('Invalid unit type');
-  }
-
-  const allowedUnitTypes = allowedTypeToUnitType[dto.type];
-
-  if (!allowedUnitTypes || !allowedUnitTypes.includes(dto.unitType)) {
-    throw new BadRequestException(
-      'Invalid unit type for the specified product type',
-    );
-  }
-};
 
 @Injectable()
 export class ProductService {
+  private readonly allowedTypeToUnitType = {
+    [ProductType.SOLID]: [UnitType.KILOGRAM],
+    [ProductType.LIQUID]: [UnitType.LITER],
+  };
   constructor(
     @InjectRepository(Product)
     private readonly productRepository: Repository<Product>,
   ) {}
-  async create(createProductDto: CreateProductDto) {
-    try {
-      checkCreateProductDto(createProductDto);
-
-      const newProduct = this.productRepository.create(createProductDto);
-
-      return await this.productRepository.save(newProduct);
-    } catch (error) {
-      throw new BadRequestException(error.message || 'Failed to save product');
-    }
-  }
-
-  async findAll() {
-    const products = await this.productRepository.find();
-
-    return products;
-  }
 
   async findOne(id: string) {
     try {
@@ -66,6 +30,24 @@ export class ProductService {
     }
   }
 
+  async findAll() {
+    const products = await this.productRepository.find();
+
+    return products;
+  }
+
+  async create(createProductDto: CreateProductDto) {
+    try {
+      this.checkProductDto(createProductDto);
+
+      const newProduct = this.productRepository.create(createProductDto);
+
+      return await this.productRepository.save(newProduct);
+    } catch (error) {
+      throw new BadRequestException(error.message || 'Failed to save product');
+    }
+  }
+
   async update(id: string, updateProductDto: UpdateProductDto) {
     try {
       const product = await this.findOne(id);
@@ -74,11 +56,16 @@ export class ProductService {
         throw new BadRequestException('Product not found');
       }
 
-      checkCreateProductDto(updateProductDto);
-      
-      const updateProduct = this.productRepository.create(updateProductDto);
+      this.checkProductDto(updateProductDto);
 
-      return await this.productRepository.save(updateProduct);
+      const updateProduct = await this.productRepository.update(
+        product.id,
+        updateProductDto,
+      );
+
+      if (updateProduct) {
+        return { message: 'Product updated' };
+      }
     } catch (error) {
       throw new BadRequestException(
         error.message || 'Failed to update product',
@@ -106,7 +93,7 @@ export class ProductService {
 
   async softDelete(id: string) {
     try {
-      const user = await this.productRepository.findOneBy({ id });
+      const user = await this.findOne(id);
 
       if (!user) {
         throw new BadRequestException('User not found');
@@ -122,4 +109,22 @@ export class ProductService {
       );
     }
   }
+
+  private checkProductDto = (dto: CreateProductDto | UpdateProductDto) => {
+    if (!Object.values(ProductType).includes(dto.type)) {
+      throw new BadRequestException('Invalid item type');
+    }
+
+    if (!Object.values(UnitType).includes(dto.unitType)) {
+      throw new BadRequestException('Invalid unit type');
+    }
+
+    const allowedUnitTypes = this.allowedTypeToUnitType[dto.type];
+
+    if (!allowedUnitTypes || !allowedUnitTypes.includes(dto.unitType)) {
+      throw new BadRequestException(
+        'Invalid unit type for the specified product type',
+      );
+    }
+  };
 }

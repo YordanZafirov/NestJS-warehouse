@@ -1,22 +1,26 @@
 import { Controller, Get } from '@nestjs/common';
-import { ReportService } from './report.service';
+import { OrderService } from '../order.service';
+import { OrderDetailsService } from 'src/order-details/order-details.service';
 
 @Controller('report')
 export class ReportController {
-  constructor(private readonly reportService: ReportService) {}
+  constructor(
+    private readonly orderService: OrderService,
+    private readonly orderDetailService: OrderDetailsService,
+  ) {}
 
   @Get('best-selling-products')
   bestSellingProducts() {
-    return this.reportService.bestSellingProducts();
+    return this.orderDetailService.bestSeller();
   }
 
   @Get('client-with-most-orders')
   clientWithMostOrders() {
-    return this.reportService.clientWithMostOrders();
+    return this.orderService.clientWithMostOrders();
   }
 
   @Get('highest-stock-per-warehouse')
   highestStockPerWarehouse() {
-    return this.reportService.highestStockPerWarehouse();
+    return this.orderDetailService.highestStockPerWarehouse();
   }
 }

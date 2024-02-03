@@ -1,5 +1,5 @@
 import { IsEnum, IsNotEmpty, IsString } from 'class-validator';
-import { ItemType } from 'src/product/entities/product.entity';
+import { ProductType } from 'src/product/entities/product.entity';
 
 export class CreateWarehouseDto {
   @IsString()
@@ -9,6 +9,6 @@ export class CreateWarehouseDto {
   @IsNotEmpty()
   address: string;
 
-  @IsEnum(ItemType)
-  type: ItemType;
+  @IsEnum(ProductType)
+  type: ProductType;
 }

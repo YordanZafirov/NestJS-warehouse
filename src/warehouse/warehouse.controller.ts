@@ -50,7 +50,7 @@ export class WarehouseController {
 
   @Roles('OPERATOR')
   @Delete('soft-delete/:uuid')
-  softDelete(@Param('id', new ParseUUIDPipe()) id: string) {
+  softDelete(@Param('uuid', new ParseUUIDPipe()) id: string) {
     return this.warehouseService.softDelete(id);
   }
 }

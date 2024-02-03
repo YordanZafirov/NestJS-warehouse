@@ -1,5 +1,5 @@
 import { IsEnum, IsNotEmpty } from 'class-validator';
-import { ItemType, UnitType } from '../entities/product.entity';
+import { ProductType, UnitType } from '../entities/product.entity';
 
 export class CreateProductDto {
   @IsNotEmpty()
@@ -8,6 +8,6 @@ export class CreateProductDto {
   @IsEnum(UnitType)
   unitType: UnitType;
 
-  @IsEnum(ItemType)
-  type: ItemType;
+  @IsEnum(ProductType)
+  type: ProductType;
 }

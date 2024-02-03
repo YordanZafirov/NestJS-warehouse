@@ -17,12 +17,6 @@ import { Roles } from 'src/decorators/roles.decorator';
 export class ClientController {
   constructor(private readonly clientService: ClientService) {}
 
-  @Roles('OPERATOR')
-  @Post()
-  create(@Body() createClientDto: CreateClientDto) {
-    return this.clientService.create(createClientDto);
-  }
-
   @Get()
   findAll() {
     return this.clientService.findAll();
@@ -31,6 +25,12 @@ export class ClientController {
   @Get(':uuid')
   findOne(@Param('uuid', new ParseUUIDPipe()) id: string) {
     return this.clientService.findOne(id);
+  }
+
+  @Roles('OPERATOR')
+  @Post()
+  create(@Body() createClientDto: CreateClientDto) {
+    return this.clientService.create(createClientDto);
   }
 
   @Roles('OPERATOR')

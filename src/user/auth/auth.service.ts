@@ -29,7 +29,7 @@ export class AuthService {
         password: hashedPassword,
       });
 
-      return newUser.email;
+      return { success: true, user: newUser };
     } catch (error) {
       throw new BadRequestException(error.message || 'Failed to save user');
     }
@@ -49,7 +49,7 @@ export class AuthService {
         throw new UnauthorizedException('Invalid credentials');
       }
 
-      const payload = { sub: user.id, email: user.email, role: user.role };
+      const payload = { id: user.id, email: user.email, role: user.role };
 
       return {
         access_token: this.jwtService.sign(payload),

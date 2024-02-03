@@ -1,8 +1,8 @@
 import { DataSource, DataSourceOptions } from 'typeorm';
+require('dotenv').config();
 
 export const dataSourceOptions: DataSourceOptions = {
   type: 'postgres',
-  // url: process.env.DATABASE_URL,
   host: process.env.DB_HOST,
   username: process.env.DB_USERNAME,
   password: process.env.DB_PASSWORD,

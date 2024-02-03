@@ -21,7 +21,9 @@ export class UserService {
 
       return await this.userRepository.save(user);
     } catch (error) {
-      throw new BadRequestException(error.message || 'Failed to save user');
+      const errorMessage =
+        typeof error === 'string' ? error : 'Failed to save user';
+      throw new BadRequestException(errorMessage);
     }
   }
 
@@ -55,9 +57,12 @@ export class UserService {
         throw new BadRequestException('User not found');
       }
 
-      const updatedUser = this.userRepository.create(updateUserDto);
+      const updatedUser = await this.userRepository.update(
+        user.id,
+        updateUserDto,
+      );
 
-      return await this.userRepository.save(user);
+      return updatedUser;
     } catch (error) {
       throw new BadRequestException(error.message || 'Failed to update user');
     }
@@ -72,8 +77,8 @@ export class UserService {
       }
 
       const userRemoved = await this.userRepository.remove(user);
-      if(userRemoved) {
-        return { message: 'User removed' }
+      if (userRemoved) {
+        return { message: 'User removed' };
       }
     } catch (error) {
       throw new BadRequestException(error.message || 'Failed to remove user');
@@ -89,8 +94,8 @@ export class UserService {
       }
 
       const userRemoved = await this.userRepository.softDelete(user.id);
-      if(userRemoved) {
-        return { message: 'User removed' }
+      if (userRemoved) {
+        return { message: 'User removed' };
       }
     } catch (error) {
       throw new BadRequestException(error.message || 'Failed to remove user');

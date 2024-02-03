@@ -35,9 +35,13 @@ export class ClientService {
   }
 
   async findAll() {
-    const clients = await this.clientRepository.find();
-
-    return clients;
+    try {
+      const clients = await this.clientRepository.find();
+      return clients;
+    } catch (error) {
+      console.error('Error fetching clients:', error);
+      throw error; // Rethrow the error or handle it as appropriate for your application.
+    }
   }
 
   async findOne(id: string) {
@@ -65,9 +69,12 @@ export class ClientService {
         throw new NotFoundException('User not found');
       }
 
-      const updateClient = this.clientRepository.create(updateClientDto);
+      const updateClient = await this.clientRepository.update(
+        client.id,
+        updateClientDto,
+      );
 
-      return await this.clientRepository.save(updateClient);
+      return updateClient;
     } catch (error) {
       throw new BadRequestException(error.message || 'Failed to update user');
     }

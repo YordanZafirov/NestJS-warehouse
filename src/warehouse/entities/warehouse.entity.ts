@@ -7,7 +7,7 @@ import {
   Entity,
   OneToMany,
 } from 'typeorm';
-import { ItemType } from '../../product/entities/product.entity';
+import { ProductType } from '../../product/entities/product.entity';
 import { Order } from 'src/order/entities/order.entity';
 
 @Entity()
@@ -21,8 +21,8 @@ export class Warehouse {
   @Column()
   address: string;
 
-  @Column({ type: 'enum', enum: ItemType })
-  type: ItemType;
+  @Column({ type: 'enum', enum: ProductType })
+  type: ProductType;
 
   @OneToMany(() => Order, (order) => order.warehouseId, { cascade: true })
   orders: Order[];

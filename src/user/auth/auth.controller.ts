@@ -11,7 +11,6 @@ import {
 import { AuthService } from './auth.service';
 import { Public } from 'src/metadata/public.metadata';
 import { CreateUserDto } from '../dto/create-user.dto';
-import { Roles } from 'src/decorators/roles.decorator';
 
 @Controller('auth')
 export class AuthController {
