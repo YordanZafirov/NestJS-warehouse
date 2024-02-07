@@ -13,6 +13,7 @@ import {
 import { Client } from '../../client/entities/client.entity';
 import { Warehouse } from 'src/warehouse/entities/warehouse.entity';
 import { OrderDetail } from 'src/order-details/entities/order-detail.entity';
+import { Invoice } from 'src/invoice/entities/invoice.entity';
 
 export enum TransferType {
   Delivery = 'delivery',
@@ -41,6 +42,12 @@ export class Order {
     onDelete: 'CASCADE',
   })
   orderDetails: OrderDetail[]; 
+
+  @OneToMany(()=> Invoice, (invoice) => invoice.order, {  
+    cascade: true,
+    onDelete: 'CASCADE',
+  })
+  invoices: Invoice[];
 
   @ManyToOne(() => Client, (client) => client.orders)
   @JoinColumn({ name: 'client_id' })

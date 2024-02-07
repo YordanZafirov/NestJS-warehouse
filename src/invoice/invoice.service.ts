@@ -1,6 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { CreateInvoiceDto } from './dto/create-invoice.dto';
-import { UpdateInvoiceDto } from './dto/update-invoice.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Invoice } from './entities/invoice.entity';
 import { Repository } from 'typeorm';
@@ -47,7 +46,43 @@ export class InvoiceService {
   }
 
   async findOne(id: number) {
-    const invoice = await this.invoiceRepository.findOneBy({ id });
+    const invoice = await this.invoiceRepository.findOne({
+      where: { id },
+      relations: ['order'],
+    });
     return invoice;
+  }
+
+  async findOneByOrderId(orderId: string) {
+    const invoice = await this.invoiceRepository.findOne({
+      where: { order: { id: orderId } },
+    });
+
+    console.log('orderId', orderId);
+    console.log('invoice', invoice);
+
+    return invoice;
+  }
+
+  async remove(id: string) {
+    const invoice = await this.findOneByOrderId(id);
+    if (!invoice) {
+      throw new NotFoundException('Invoice not found');
+    }
+
+    await this.invoiceRepository.remove(invoice);
+
+    return { message: 'Invoice removed' };
+  }
+
+  async softDelete(id: string) {
+    const invoice = await this.findOneByOrderId(id);
+    if (!invoice) {
+      throw new NotFoundException('Invoice not found or already deleted');
+    }
+
+    await this.invoiceRepository.softRemove(invoice);
+
+    return { message: 'Invoice removed' };
   }
 }

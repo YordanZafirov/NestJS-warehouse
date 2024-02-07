@@ -29,4 +29,9 @@ export class OrderDetailsController {
   async findOne(@Param('uuid', new ParseUUIDPipe()) id: string) {
     return await this.orderDetailsService.findOne(id);
   }
+
+  @Get('order/:orderId')
+  async findByOrderId(@Param('orderId', new ParseUUIDPipe()) orderId: string) {
+    return await this.orderDetailsService.findByOrderId(orderId);
+  }
 }

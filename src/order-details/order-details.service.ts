@@ -43,6 +43,25 @@ export class OrderDetailsService {
     }
   }
 
+  async findByOrderId(orderId: string): Promise<OrderDetail[]> {
+    try {
+      const orderDetails = await this.orderDetailRepository.find({
+        where: { orderId: { id: orderId } },
+        relations: ['productId', 'orderId'],
+      });
+
+      if (!orderDetails) {
+        throw new NotFoundException('OrderDetail not found');
+      }
+
+      return orderDetails;
+    } catch (error) {
+      throw new NotFoundException(
+        error.message || 'Failed to find order detail',
+      );
+    }
+  }
+
   async create(orderDetailDto: CreateOrderDetailDto): Promise<OrderDetail> {
     try {
       const { orderId, productId, quantity, unitPrice } = orderDetailDto;

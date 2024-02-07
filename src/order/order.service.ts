@@ -206,6 +206,8 @@ export class OrderService {
         }),
       );
 
+      await this.invoiceService.remove(id);
+
       const removdeOrder = await this.orderRepository.remove(order);
       if (removdeOrder) {
         return { message: 'Order removed' };
@@ -219,7 +221,7 @@ export class OrderService {
     try {
       const order = await this.findOne(id, { relations: ['orderDetails'] });
 
-      if (!order || order.deletedAt) {
+      if (!order) {
         throw new NotFoundException('Order not found or already deleted');
       }
 
@@ -229,8 +231,10 @@ export class OrderService {
         }),
       );
 
-      const removdeOrdeer = await this.orderRepository.softRemove(order);
-      if (removdeOrdeer) {
+      await this.invoiceService.softDelete(id);
+
+      const removdeOrder = await this.orderRepository.softRemove(order);
+      if (removdeOrder) {
         return { message: 'Order removed' };
       }
     } catch (error) {

@@ -16,23 +16,6 @@ export class ClientService {
     @InjectRepository(Client)
     private clientRepository: Repository<Client>,
   ) {}
-  async create(createClientDto: CreateClientDto) {
-    try {
-      // Check if the email is already in use
-      const existingUser = await this.clientRepository.findOne({
-        where: { email: createClientDto.email },
-      });
-
-      if (existingUser) {
-        throw new BadRequestException('Email already in use');
-      }
-      const newClient = this.clientRepository.create(createClientDto);
-
-      return await this.clientRepository.save(newClient);
-    } catch (error) {
-      throw new BadRequestException(error.message || 'Failed to save client');
-    }
-  }
 
   async findAll() {
     try {
@@ -61,6 +44,24 @@ export class ClientService {
     }
   }
 
+  async create(createClientDto: CreateClientDto) {
+    try {
+      // Check if the email is already in use
+      const existingUser = await this.clientRepository.findOne({
+        where: { email: createClientDto.email },
+      });
+
+      if (existingUser) {
+        throw new BadRequestException('Email already in use');
+      }
+      const newClient = this.clientRepository.create(createClientDto);
+
+      return await this.clientRepository.save(newClient);
+    } catch (error) {
+      throw new BadRequestException(error.message || 'Failed to save client');
+    }
+  }
+
   async update(id: string, updateClientDto: UpdateClientDto) {
     try {
       const client = await this.clientRepository.findOneBy({ id });
@@ -74,7 +75,9 @@ export class ClientService {
         updateClientDto,
       );
 
-      return updateClient;
+      if (updateClient) {
+        return { message: 'Client updated' };
+      }
     } catch (error) {
       throw new BadRequestException(error.message || 'Failed to update user');
     }

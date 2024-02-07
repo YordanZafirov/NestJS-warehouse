@@ -44,7 +44,7 @@ export class WarehouseController {
 
   @Roles('OWNER')
   @Delete(':uuid')
-  remove(@Param('id', new ParseUUIDPipe()) id: string) {
+  remove(@Param('uuid', new ParseUUIDPipe()) id: string) {
     return this.warehouseService.remove(id);
   }
 
