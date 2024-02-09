@@ -148,29 +148,44 @@ export class OrderDetailsService {
       .groupBy('product.name')
       .addGroupBy('orderDetail.quantity')
       .orderBy('best_selling', 'DESC')
+      .limit(1)
       .getRawMany();
 
     return query;
   }
 
   async highestStockPerWarehouse() {
-    const query = await this.orderDetailRepository
-      .createQueryBuilder('orderDetail')
-      .select([
-        'SUM(orderDetail.quantity) AS total_quantity',
-        'product.name AS product_name',
-        'warehouse.name AS warehouse_name',
-      ])
-      .innerJoin(Order, 'order', 'orderDetail.order_id = order.id')
-      .innerJoin(Product, 'product', 'orderDetail.product_id = product.id')
-      .innerJoin(Warehouse, 'warehouse', 'order.warehouse_id = warehouse.id')
-      .where('order.type = :type', { type: 'delivery' })
-      .andWhere('order.deleted_at IS NULL')
-      .groupBy('product.name')
-      .addGroupBy('warehouse.name')
-      .orderBy('total_quantity', 'DESC')
-      .getRawMany();
+    const sql = `
+    SELECT 
+    max_quantity,
+    product_name,
+    warehouse_name
+FROM (
+    SELECT 
+        MAX(od.quantity) AS max_quantity,
+        p.name AS product_name,
+        w.name AS warehouse_name,
+        ROW_NUMBER() OVER(PARTITION BY w.name ORDER BY MAX(od.quantity) DESC) AS row_num
+    FROM 
+        order_detail od
+    JOIN 
+        product p ON od.product_id = p.id
+    JOIN 
+        "order" o ON od.order_id = o.id
+    JOIN 
+        warehouse w ON o.warehouse_id = w.id
+    WHERE 
+        o.deleted_at IS NULL
+    GROUP BY 
+        p.name, w.name
+) AS subquery
+WHERE 
+    row_num = 1
+ORDER BY 
+    max_quantity DESC;
+    `;
 
+    const query = await this.orderDetailRepository.query(sql);
     return query;
   }
 }
