@@ -24,7 +24,7 @@ export class Warehouse {
   @Column({ type: 'enum', enum: ProductType })
   type: ProductType;
 
-  @OneToMany(() => Order, (order) => order.warehouseId, { cascade: true })
+  @OneToMany(() => Order, (order) => order.warehouseId)
   orders: Order[];
 
   @CreateDateColumn({
